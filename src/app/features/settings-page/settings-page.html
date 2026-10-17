@@ -1,4 +1,36 @@
 <section class="page">
   <h1>Producer settings</h1>
-  <p>The validated producer form will appear here in a later step.</p>
+  <p class="intro">
+    Changes stay in the form until you apply them. Applied values are kept in memory for this
+    browser session only.
+  </p>
+
+  <p class="applied" data-testid="applied-settings">
+    Applied: {{ applied().instrumentCount }} instruments, {{ applied().updatesPerBatch }} updates /
+    batch, {{ applied().batchIntervalMs }} ms
+  </p>
+
+  <form class="settings-form" [formGroup]="form" (ngSubmit)="apply()" novalidate>
+    @for (field of fields; track field) {
+      <label class="field">
+        <span>{{ labels[field] }}</span>
+        <input
+          type="number"
+          step="1"
+          [formControl]="form.controls[field]"
+          [attr.min]="limits[field].min"
+          [attr.max]="limits[field].max"
+          [attr.aria-invalid]="isInvalid(form.controls[field])"
+        />
+        @if (isInvalid(form.controls[field])) {
+          <span class="error">
+            {{ getErrorMessage(form.controls[field], field) }}
+          </span>
+        }
+      </label>
+    }
+
+    <button type="submit" [disabled]="!form.valid">Apply</button>
+  </form>
 </section>
+
