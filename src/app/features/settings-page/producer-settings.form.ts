@@ -11,7 +11,7 @@ import {
   type ProducerSettings,
 } from '../../core/models/producer-settings';
 
-export type ProducerSettingsForm = FormGroup<{
+type ProducerSettingsForm = FormGroup<{
   instrumentCount: FormControl<number | null>;
   updatesPerBatch: FormControl<number | null>;
   batchIntervalMs: FormControl<number | null>;

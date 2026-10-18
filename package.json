@@ -3,9 +3,13 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
+    "build:wasm": "asc wasm-producer/assembly/index.ts --outFile public/market-producer.wasm --runtime stub --optimize --noAssert --initialMemory 1 && node scripts/embed-wasm.mjs",
+    "prestart": "npm run build:wasm",
     "start": "ng serve",
+    "prebuild": "npm run build:wasm",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
+    "pretest": "npm run build:wasm",
     "test": "ng test"
   },
   "private": true,
@@ -24,6 +28,7 @@
     "@angular/build": "^22.0.2",
     "@angular/cli": "^22.0.2",
     "@angular/compiler-cli": "^22.0.0",
+    "assemblyscript": "^0.28.20",
     "jsdom": "^28.0.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",

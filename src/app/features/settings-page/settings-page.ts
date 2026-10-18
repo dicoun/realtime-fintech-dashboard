@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { AbstractControl, ReactiveFormsModule } from '@angular/forms';
+import { ProducerFacade } from '../../core/producer/producer.facade';
 import { ProducerSettingsStore } from '../../core/producer/producer-settings.store';
 import { createProducerSettingsForm, readProducerSettings } from './producer-settings.form';
 import { PRODUCER_SETTINGS_LIMITS } from '../../core/models/producer-settings';
@@ -22,6 +23,7 @@ const FIELD_LABELS = {
 })
 export class SettingsPage {
   private readonly settingsStore = inject(ProducerSettingsStore);
+  private readonly producer = inject(ProducerFacade);
 
   protected readonly fields = fields;
   protected readonly labels = FIELD_LABELS;
@@ -66,6 +68,7 @@ export class SettingsPage {
     }
 
     this.settingsStore.apply(settings);
+    this.producer.start(settings);
   }
 }
 

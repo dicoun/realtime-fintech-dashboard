@@ -1,17 +1,34 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ProducerSettingsStore } from '../../core/producer/producer-settings.store';
-import { PRODUCER_SETTINGS_DEFAULTS } from '../../core/models/producer-settings';
+import { ProducerFacade } from '../../core/producer/producer.facade';
+import {
+  PRODUCER_SETTINGS_DEFAULTS,
+  type ProducerSettings,
+} from '../../core/models/producer-settings';
 import { SettingsPage } from './settings-page';
 
 describe('SettingsPage', () => {
   let component: SettingsPage;
   let fixture: ComponentFixture<SettingsPage>;
   let store: ProducerSettingsStore;
+  let started: ProducerSettings[];
 
   beforeEach(async () => {
+    started = [];
     await TestBed.configureTestingModule({
       imports: [SettingsPage],
-      providers: [ProducerSettingsStore],
+      providers: [
+        ProducerSettingsStore,
+        {
+          provide: ProducerFacade,
+          useValue: {
+            start(settings: ProducerSettings): number {
+              started.push(settings);
+              return started.length;
+            },
+          },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SettingsPage);
@@ -53,6 +70,7 @@ describe('SettingsPage', () => {
     fixture.detectChanges();
 
     expect(store.applied()).toEqual(next);
+    expect(started).toEqual([next]);
     expect(appliedSummary()).toContain('8 instruments');
     expect(appliedSummary()).toContain('250 updates');
     expect(appliedSummary()).toContain('100 ms');
@@ -91,6 +109,7 @@ describe('SettingsPage', () => {
       batchIntervalMs: 750,
     });
     expect(queryApplyButton().disabled).toBe(true);
+    expect(started).toEqual([]);
     expect(component.form.controls.updatesPerBatch.touched).toBe(false);
     expect(queryError()).toBeNull();
   });
