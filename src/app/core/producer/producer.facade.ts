@@ -1,4 +1,5 @@
 import { DestroyRef, Injectable, InjectionToken, inject, signal } from '@angular/core';
+import { MarketTableStore } from '../market/market-table.store';
 import type { MarketUpdate } from '../models/market-update';
 import type { ProducerCommand, ProducerEvent } from '../models/producer-messages';
 import type { ProducerSettings } from '../models/producer-settings';
@@ -25,6 +26,7 @@ export const PRODUCER_WORKER_FACTORY = new InjectionToken<ProducerWorkerFactory>
 @Injectable({ providedIn: 'root' })
 export class ProducerFacade {
   private readonly workerFactory = inject(PRODUCER_WORKER_FACTORY);
+  private readonly table = inject(MarketTableStore);
   private worker: ProducerWorkerPort | null = null;
   private runId = 0;
 
@@ -43,6 +45,7 @@ export class ProducerFacade {
     this.lastBatch.set([]);
     this.errorMessage.set(null);
     this.status.set('starting');
+    this.table.reset(settings.instrumentCount);
     this.ensureWorker().postMessage({
       type: 'start',
       runId: this.runId,
@@ -81,6 +84,7 @@ export class ProducerFacade {
       return;
     }
     if (event.type === 'batch') {
+      this.table.apply(event.updates);
       this.lastBatch.set(event.updates);
       this.acceptedUpdates.update((count) => count + event.updates.length);
       this.status.set('running');

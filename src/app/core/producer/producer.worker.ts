@@ -19,7 +19,6 @@ let pending: ProducerCommand | null = null;
 
 function post(event: ProducerEvent): void {
   scope.postMessage(event);
-  console.log('postMessage', event);
 }
 
 function handle(command: ProducerCommand): void {

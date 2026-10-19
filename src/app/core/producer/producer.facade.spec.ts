@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import type { MarketUpdate } from '../models/market-update';
 import type { ProducerCommand, ProducerEvent } from '../models/producer-messages';
 import { PRODUCER_SETTINGS_DEFAULTS } from '../models/producer-settings';
+import { MarketTableStore } from '../market/market-table.store';
 import {
   PRODUCER_WORKER_FACTORY,
   ProducerFacade,
@@ -50,10 +51,13 @@ describe('ProducerFacade', () => {
     worker.emit({ type: 'batch', runId: firstRun, updates: [sampleUpdate(), sampleUpdate()] });
     expect(facade.acceptedUpdates()).toBe(0);
     expect(facade.lastBatch()).toEqual([]);
+    expect(TestBed.inject(MarketTableStore).rows()[0]?.volume).toBe(0);
 
     worker.emit({ type: 'batch', runId: nextRun, updates: [sampleUpdate()] });
     expect(facade.acceptedUpdates()).toBe(1);
     expect(facade.lastBatch()[0]?.instrument).toBe('ALFA');
+    expect(TestBed.inject(MarketTableStore).rows()[0]?.volume).toBe(1);
+    expect(TestBed.inject(MarketTableStore).rows()).toHaveLength(8);
   });
 
   it('surfaces wasm load errors and terminates the worker', () => {

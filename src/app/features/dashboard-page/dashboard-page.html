@@ -1,4 +1,32 @@
 <section class="page">
   <h1>Live market dashboard</h1>
-  <p>Instrument table and producer controls will appear here in a later step.</p>
+  @if (errorMessage(); as message) {
+    <p class="error">{{ message }}</p>
+  }
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Instrument</th>
+          <th scope="col">Last traded price</th>
+          <th scope="col">Bid–ask spread</th>
+          <th scope="col">Trading volume</th>
+          <th scope="col">VWAP</th>
+          <th scope="col">Order-book imbalance</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.symbol) {
+          <tr>
+            <th scope="row">{{ row.symbol }}</th>
+            <td>{{ row.lastPrice }}</td>
+            <td>{{ row.spread }}</td>
+            <td>{{ row.volume }}</td>
+            <td>{{ row.vwap }}</td>
+            <td>{{ row.imbalance }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
 </section>

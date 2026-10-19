@@ -2,3 +2,49 @@
   display: grid;
   gap: 0.75rem;
 }
+
+.error {
+  margin: 0;
+  color: #9b2c2c;
+  font-size: 0.9rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+  padding: 0.65rem 0.8rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+thead th {
+  font-size: 0.85rem;
+  text-align: right;
+  background: var(--color-accent-muted);
+}
+
+th:first-child,
+td:first-child {
+  text-align: left;
+}
+
+tbody th {
+  font-weight: 600;
+}
+
+tbody tr + tr th,
+tbody tr + tr td {
+  border-top: 1px solid var(--color-border);
+}
