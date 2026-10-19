@@ -1,7 +1,14 @@
+import {
+  applyMarketUpdates,
+  createInstrumentRows,
+  type InstrumentMetrics,
+} from '../market/instrument-metrics';
 import type { MarketUpdate } from '../models/market-update';
 import type { ProducerCommand, ProducerEvent } from '../models/producer-messages';
 import { instrumentSymbol } from './instrument-symbol';
 import type { MarketGenerator } from './wasm-market-generator';
+
+export const UI_SNAPSHOT_INTERVAL_MS = 200;
 
 export interface ProducerClock {
   setInterval(handler: () => void, intervalMs: number): unknown;
@@ -12,6 +19,10 @@ export class ProducerSession {
   private timer: unknown = null;
   private settings: ProducerCommand['settings'] | null = null;
   private runId = 0;
+  private rows: InstrumentMetrics[] = [];
+  private acceptedUpdates = 0;
+  private elapsedMs = 0;
+  private lastSnapshotMs = Number.NEGATIVE_INFINITY;
 
   public constructor(
     private readonly generator: MarketGenerator,
@@ -24,6 +35,10 @@ export class ProducerSession {
     this.generator.init(command.settings.instrumentCount, command.seed);
     this.settings = command.settings;
     this.runId = command.runId;
+    this.rows = createInstrumentRows(command.settings.instrumentCount);
+    this.acceptedUpdates = 0;
+    this.elapsedMs = 0;
+    this.lastSnapshotMs = Number.NEGATIVE_INFINITY;
     this.arm();
     this.emit({ type: 'status', runId: this.runId, status: 'running' });
   }
@@ -50,7 +65,19 @@ export class ProducerSession {
       });
     }
 
-    this.emit({ type: 'batch', runId: this.runId, updates });
+    this.rows = applyMarketUpdates(this.rows, updates);
+    this.acceptedUpdates += updates.length;
+    this.elapsedMs += this.settings.batchIntervalMs;
+    if (this.elapsedMs - this.lastSnapshotMs < UI_SNAPSHOT_INTERVAL_MS) {
+      return;
+    }
+    this.lastSnapshotMs = this.elapsedMs;
+    this.emit({
+      type: 'snapshot',
+      runId: this.runId,
+      acceptedUpdates: this.acceptedUpdates,
+      rows: this.rows,
+    });
   }
 
   private arm(): void {

@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import type { MarketUpdate } from '../models/market-update';
+import { createInstrumentRows, type InstrumentMetrics } from '../market/instrument-metrics';
+import { MarketTableStore } from '../market/market-table.store';
 import type { ProducerCommand, ProducerEvent } from '../models/producer-messages';
 import { PRODUCER_SETTINGS_DEFAULTS } from '../models/producer-settings';
-import { MarketTableStore } from '../market/market-table.store';
 import {
   PRODUCER_WORKER_FACTORY,
   ProducerFacade,
@@ -21,7 +21,7 @@ describe('ProducerFacade', () => {
     facade = TestBed.inject(ProducerFacade);
   });
 
-  it('sends applied settings to the worker and counts each update once', () => {
+  it('sends applied settings to the worker and replaces the table from a snapshot', () => {
     const runId = facade.start(PRODUCER_SETTINGS_DEFAULTS, 11);
 
     expect(worker.messages[0]).toEqual({
@@ -31,31 +31,27 @@ describe('ProducerFacade', () => {
       seed: 11,
     });
 
-    worker.emit({ type: 'batch', runId, updates: [sampleUpdate(), sampleUpdate()] });
+    worker.emit(snapshot(runId, 2, tradedRows(5, 2)));
 
     expect(facade.acceptedUpdates()).toBe(2);
-    expect(facade.lastBatch()).toHaveLength(2);
     expect(facade.status()).toBe('running');
+    expect(TestBed.inject(MarketTableStore).rows()[0]?.volume).toBe(2);
   });
 
-  it('ignores batches from an older run', () => {
+  it('ignores snapshots from an older run', () => {
     const firstRun = facade.start(PRODUCER_SETTINGS_DEFAULTS, 1);
-    worker.emit({ type: 'batch', runId: firstRun, updates: [sampleUpdate()] });
+    worker.emit(snapshot(firstRun, 1, tradedRows(5, 1)));
 
-    const nextRun = facade.start(
-      { ...PRODUCER_SETTINGS_DEFAULTS, instrumentCount: 8 },
-      2,
-    );
+    const nextRun = facade.start({ ...PRODUCER_SETTINGS_DEFAULTS, instrumentCount: 8 }, 2);
     expect(facade.acceptedUpdates()).toBe(0);
 
-    worker.emit({ type: 'batch', runId: firstRun, updates: [sampleUpdate(), sampleUpdate()] });
+    worker.emit(snapshot(firstRun, 3, tradedRows(5, 3)));
     expect(facade.acceptedUpdates()).toBe(0);
-    expect(facade.lastBatch()).toEqual([]);
     expect(TestBed.inject(MarketTableStore).rows()[0]?.volume).toBe(0);
 
-    worker.emit({ type: 'batch', runId: nextRun, updates: [sampleUpdate()] });
+    worker.emit(snapshot(nextRun, 1, tradedRows(8, 1)));
     expect(facade.acceptedUpdates()).toBe(1);
-    expect(facade.lastBatch()[0]?.instrument).toBe('ALFA');
+    expect(TestBed.inject(MarketTableStore).rows()[0]?.symbol).toBe('ALFA');
     expect(TestBed.inject(MarketTableStore).rows()[0]?.volume).toBe(1);
     expect(TestBed.inject(MarketTableStore).rows()).toHaveLength(8);
   });
@@ -114,14 +110,16 @@ class FakeWorker implements ProducerWorkerPort {
   }
 }
 
-function sampleUpdate(): MarketUpdate {
-  return {
-    instrument: 'ALFA',
-    priceCents: 10_000,
-    tradeQuantity: 1,
-    bidCents: 9_999,
-    askCents: 10_000,
-    bidQuantity: 1,
-    askQuantity: 1,
-  };
+function snapshot(
+  runId: number,
+  acceptedUpdates: number,
+  rows: InstrumentMetrics[],
+): ProducerEvent {
+  return { type: 'snapshot', runId, acceptedUpdates, rows };
+}
+
+function tradedRows(instrumentCount: number, volume: number): InstrumentMetrics[] {
+  const rows = createInstrumentRows(instrumentCount);
+  rows[0] = { ...rows[0], volume, lastPriceCents: 10_000 };
+  return rows;
 }

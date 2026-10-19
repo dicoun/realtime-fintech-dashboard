@@ -47,7 +47,7 @@ describe('DashboardPage', () => {
     TestBed.inject(ProducerFacade).errorMessage.set('Failed to load market producer wasm (404)');
     fixture.detectChanges();
 
-    const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement;
+    const alert = fixture.nativeElement.querySelector('p.error') as HTMLElement;
     expect(alert.textContent).toContain('Failed to load market producer wasm (404)');
     expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(5);
   });

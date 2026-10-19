@@ -19,4 +19,8 @@ export class MarketTableStore {
   public apply(updates: readonly MarketUpdate[]): void {
     this.rowsState.update((rows) => applyMarketUpdates(rows, updates));
   }
+
+  public replace(rows: readonly InstrumentMetrics[]): void {
+    this.rowsState.set(rows.map((row) => ({ ...row })));
+  }
 }

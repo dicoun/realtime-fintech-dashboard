@@ -1,4 +1,4 @@
-import type { MarketUpdate } from './market-update';
+import type { InstrumentMetrics } from '../market/instrument-metrics';
 import type { ProducerSettings } from './producer-settings';
 
 export interface ProducerCommand {
@@ -12,6 +12,11 @@ type ProducerRuntimeStatus = 'running';
 
 export type ProducerEvent =
   | { type: 'ready' }
-  | { type: 'batch'; runId: number; updates: MarketUpdate[] }
+  | {
+      type: 'snapshot';
+      runId: number;
+      acceptedUpdates: number;
+      rows: InstrumentMetrics[];
+    }
   | { type: 'status'; runId: number; status: ProducerRuntimeStatus }
   | { type: 'error'; message: string };

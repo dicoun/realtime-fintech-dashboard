@@ -1,6 +1,5 @@
 import { DestroyRef, Injectable, InjectionToken, inject, signal } from '@angular/core';
 import { MarketTableStore } from '../market/market-table.store';
-import type { MarketUpdate } from '../models/market-update';
 import type { ProducerCommand, ProducerEvent } from '../models/producer-messages';
 import type { ProducerSettings } from '../models/producer-settings';
 
@@ -36,13 +35,11 @@ export class ProducerFacade {
 
   public readonly status = signal<ProducerRunStatus>('idle');
   public readonly errorMessage = signal<string | null>(null);
-  public readonly lastBatch = signal<readonly MarketUpdate[]>([]);
   public readonly acceptedUpdates = signal(0);
 
   public start(settings: ProducerSettings, seed = Date.now()): number {
     this.runId += 1;
     this.acceptedUpdates.set(0);
-    this.lastBatch.set([]);
     this.errorMessage.set(null);
     this.status.set('starting');
     this.table.reset(settings.instrumentCount);
@@ -83,10 +80,9 @@ export class ProducerFacade {
     if (event.runId !== this.runId) {
       return;
     }
-    if (event.type === 'batch') {
-      this.table.apply(event.updates);
-      this.lastBatch.set(event.updates);
-      this.acceptedUpdates.update((count) => count + event.updates.length);
+    if (event.type === 'snapshot') {
+      this.table.replace(event.rows);
+      this.acceptedUpdates.set(event.acceptedUpdates);
       this.status.set('running');
       return;
     }
