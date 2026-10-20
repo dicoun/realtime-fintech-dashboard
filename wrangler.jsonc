@@ -1,0 +1,8 @@
+{
+  "name": "realtime-fintech-dashboard",
+  "compatibility_date": "2026-10-20",
+  "assets": {
+    "directory": "./dist/realtime-fintech-dashboard/browser",
+    "not_found_handling": "single-page-application"
+  }
+}
