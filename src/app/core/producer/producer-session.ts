@@ -5,6 +5,7 @@ import {
 } from '../market/instrument-metrics';
 import type { MarketUpdate } from '../models/market-update';
 import type { ProducerCommand, ProducerEvent } from '../models/producer-messages';
+import type { ProducerSettings } from '../models/producer-settings';
 import { instrumentSymbol } from './instrument-symbol';
 import type { MarketGenerator } from './wasm-market-generator';
 
@@ -17,8 +18,9 @@ export interface ProducerClock {
 
 export class ProducerSession {
   private timer: unknown = null;
-  private settings: ProducerCommand['settings'] | null = null;
+  private settings: ProducerSettings | null = null;
   private runId = 0;
+  private paused = false;
   private rows: InstrumentMetrics[] = [];
   private acceptedUpdates = 0;
   private elapsedMs = 0;
@@ -30,15 +32,34 @@ export class ProducerSession {
     private readonly clock: ProducerClock,
   ) {}
 
-  public start(command: ProducerCommand): void {
+  public start(command: Extract<ProducerCommand, { type: 'start' }>): void {
     this.clearTimer();
     this.generator.init(command.settings.instrumentCount, command.seed);
     this.settings = command.settings;
     this.runId = command.runId;
+    this.paused = false;
     this.rows = createInstrumentRows(command.settings.instrumentCount);
     this.acceptedUpdates = 0;
     this.elapsedMs = 0;
     this.lastSnapshotMs = Number.NEGATIVE_INFINITY;
+    this.arm();
+    this.emit({ type: 'status', runId: this.runId, status: 'running' });
+  }
+
+  public pause(runId: number): void {
+    if (runId !== this.runId || !this.settings || this.paused) {
+      return;
+    }
+    this.clearTimer();
+    this.paused = true;
+    this.emit({ type: 'status', runId: this.runId, status: 'paused' });
+  }
+
+  public resume(runId: number): void {
+    if (runId !== this.runId || !this.paused) {
+      return;
+    }
+    this.paused = false;
     this.arm();
     this.emit({ type: 'status', runId: this.runId, status: 'running' });
   }

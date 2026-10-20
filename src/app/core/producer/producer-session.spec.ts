@@ -99,6 +99,57 @@ describe('ProducerSession', () => {
     expect(totalVolume(latest?.rows ?? [])).toBe(10);
   });
 
+  it('pauses generation and resumes the same totals', () => {
+    const generator = fakeGenerator();
+    const clock = fakeClock();
+    const events: ProducerEvent[] = [];
+    const session = new ProducerSession(generator, (event) => events.push(event), clock);
+
+    session.start({
+      type: 'start',
+      runId: 4,
+      settings: { ...PRODUCER_SETTINGS_DEFAULTS, updatesPerBatch: 3, batchIntervalMs: 500 },
+      seed: 1,
+    });
+    clock.fire();
+    const updatesAfterFirstTick = generator.updates;
+
+    session.pause(4);
+    clock.fire();
+
+    expect(events.at(-1)).toEqual({ type: 'status', runId: 4, status: 'paused' });
+    expect(clock.intervalMs).toBeNull();
+    expect(generator.updates).toBe(updatesAfterFirstTick);
+    expect(snapshots(events)).toHaveLength(1);
+
+    session.resume(4);
+    clock.fire();
+
+    expect(generator.inits).toBe(1);
+    expect(events.at(-1)?.type).toBe('snapshot');
+    expect(totalVolume(snapshots(events).at(-1)?.rows ?? [])).toBe(6);
+    expect(snapshots(events).at(-1)?.runId).toBe(4);
+  });
+
+  it('ignores pause for another run', () => {
+    const generator = fakeGenerator();
+    const clock = fakeClock();
+    const events: ProducerEvent[] = [];
+    const session = new ProducerSession(generator, (event) => events.push(event), clock);
+
+    session.start({
+      type: 'start',
+      runId: 4,
+      settings: { ...PRODUCER_SETTINGS_DEFAULTS, updatesPerBatch: 3, batchIntervalMs: 500 },
+      seed: 1,
+    });
+    session.pause(99);
+    clock.fire();
+
+    expect(events.some((event) => event.type === 'status' && event.status === 'paused')).toBe(false);
+    expect(generator.updates).toBe(3);
+  });
+
   it('resets generator state when a new run starts', () => {
     const generator = fakeGenerator();
     const clock = fakeClock();

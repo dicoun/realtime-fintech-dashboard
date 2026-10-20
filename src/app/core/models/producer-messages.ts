@@ -1,14 +1,17 @@
 import type { InstrumentMetrics } from '../market/instrument-metrics';
 import type { ProducerSettings } from './producer-settings';
 
-export interface ProducerCommand {
-  type: 'start';
-  runId: number;
-  settings: ProducerSettings;
-  seed: number;
-}
+export type ProducerCommand =
+  | {
+      type: 'start';
+      runId: number;
+      settings: ProducerSettings;
+      seed: number;
+    }
+  | { type: 'pause'; runId: number }
+  | { type: 'resume'; runId: number };
 
-type ProducerRuntimeStatus = 'running';
+type ProducerRuntimeStatus = 'running' | 'paused';
 
 export type ProducerEvent =
   | { type: 'ready' }

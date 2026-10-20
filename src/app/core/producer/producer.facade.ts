@@ -3,7 +3,7 @@ import { MarketTableStore } from '../market/market-table.store';
 import type { ProducerCommand, ProducerEvent } from '../models/producer-messages';
 import type { ProducerSettings } from '../models/producer-settings';
 
-type ProducerRunStatus = 'idle' | 'starting' | 'running' | 'error';
+type ProducerRunStatus = 'idle' | 'starting' | 'running' | 'paused' | 'error';
 
 export interface ProducerWorkerPort {
   postMessage(message: ProducerCommand): void;
@@ -52,6 +52,20 @@ export class ProducerFacade {
     return this.runId;
   }
 
+  public pause(): void {
+    if (this.status() !== 'running' || !this.worker) {
+      return;
+    }
+    this.worker.postMessage({ type: 'pause', runId: this.runId });
+  }
+
+  public resume(): void {
+    if (this.status() !== 'paused' || !this.worker) {
+      return;
+    }
+    this.worker.postMessage({ type: 'resume', runId: this.runId });
+  }
+
   private releaseWorker(): void {
     this.worker?.terminate();
     this.worker = null;
@@ -83,9 +97,11 @@ export class ProducerFacade {
     if (event.type === 'snapshot') {
       this.table.replace(event.rows);
       this.acceptedUpdates.set(event.acceptedUpdates);
-      this.status.set('running');
+      if (this.status() !== 'paused') {
+        this.status.set('running');
+      }
       return;
     }
-    this.status.set('running');
+    this.status.set(event.status);
   }
 }

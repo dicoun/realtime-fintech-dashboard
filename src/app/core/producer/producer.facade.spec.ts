@@ -56,6 +56,53 @@ describe('ProducerFacade', () => {
     expect(TestBed.inject(MarketTableStore).rows()).toHaveLength(8);
   });
 
+  it('pauses and resumes without clearing totals', () => {
+    const runId = facade.start(PRODUCER_SETTINGS_DEFAULTS, 1);
+    worker.emit(snapshot(runId, 4, tradedRows(5, 4)));
+
+    facade.pause();
+    expect(worker.messages.at(-1)).toEqual({ type: 'pause', runId });
+    worker.emit({ type: 'status', runId, status: 'paused' });
+
+    expect(facade.status()).toBe('paused');
+    expect(TestBed.inject(MarketTableStore).rows()[0]?.volume).toBe(4);
+
+    worker.emit(snapshot(runId, 9, tradedRows(5, 9)));
+    expect(facade.status()).toBe('paused');
+    expect(TestBed.inject(MarketTableStore).rows()[0]?.volume).toBe(9);
+
+    facade.resume();
+    expect(worker.messages.at(-1)).toEqual({ type: 'resume', runId });
+    worker.emit({ type: 'status', runId, status: 'running' });
+    expect(facade.status()).toBe('running');
+    expect(TestBed.inject(MarketTableStore).rows()[0]?.volume).toBe(9);
+  });
+
+  it('starts a new run while paused', () => {
+    const runId = facade.start(PRODUCER_SETTINGS_DEFAULTS, 1);
+    worker.emit({ type: 'status', runId, status: 'running' });
+    facade.pause();
+    worker.emit({ type: 'status', runId, status: 'paused' });
+
+    const nextRun = facade.start({ ...PRODUCER_SETTINGS_DEFAULTS, instrumentCount: 2 }, 2);
+
+    expect(facade.status()).toBe('starting');
+    expect(worker.messages.at(-1)).toMatchObject({ type: 'start', runId: nextRun });
+    expect(TestBed.inject(MarketTableStore).rows()).toHaveLength(2);
+    expect(TestBed.inject(MarketTableStore).rows()[0]?.volume).toBe(0);
+  });
+
+  it('ignores a pause status from an older run', () => {
+    const firstRun = facade.start(PRODUCER_SETTINGS_DEFAULTS, 1);
+    const nextRun = facade.start(PRODUCER_SETTINGS_DEFAULTS, 2);
+
+    worker.emit({ type: 'status', runId: firstRun, status: 'paused' });
+    expect(facade.status()).toBe('starting');
+
+    worker.emit({ type: 'status', runId: nextRun, status: 'running' });
+    expect(facade.status()).toBe('running');
+  });
+
   it('surfaces wasm load errors and terminates the worker', () => {
     facade.start(PRODUCER_SETTINGS_DEFAULTS, 1);
     worker.emit({ type: 'error', message: 'Failed to load market producer wasm (404)' });

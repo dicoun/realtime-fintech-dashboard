@@ -15,4 +15,34 @@ export class DashboardPage {
 
   public readonly rows = computed(() => this.table.rows().map(presentInstrument));
   public readonly errorMessage = this.producer.errorMessage;
+  public readonly status = this.producer.status;
+  public readonly statusLabel = computed(() => {
+    switch (this.status()) {
+      case 'running':
+        return 'Running';
+      case 'paused':
+        return 'Paused';
+      case 'starting':
+        return 'Starting';
+      case 'error':
+        return 'Error';
+      default:
+        return 'Idle';
+    }
+  });
+
+  public toggleProducer(): void {
+    if (this.status() === 'paused') {
+      this.producer.resume();
+      return;
+    }
+    if (this.status() === 'running') {
+      this.producer.pause();
+    }
+  }
+
+  public canToggleProducer(): boolean {
+    const status = this.status();
+    return status === 'running' || status === 'paused';
+  }
 }
