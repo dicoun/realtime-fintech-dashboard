@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MarketTableStore } from '../../core/market/market-table.store';
-import type { MarketUpdate } from '../../core/models/market-update';
 import type { ProducerCommand, ProducerEvent } from '../../core/models/producer-messages';
 import { PRODUCER_SETTINGS_DEFAULTS } from '../../core/models/producer-settings';
 import {
@@ -86,9 +85,17 @@ describe('DashboardPage', () => {
   });
 
   it('shows cumulative trade metrics after a batch', () => {
-    table.apply([
-      trade({ priceCents: 10_000, tradeQuantity: 10 }),
-      trade({ priceCents: 10_200, tradeQuantity: 30, bidCents: 10_196, askCents: 10_200 }),
+    const [alfa, ...rest] = table.rows();
+    table.replace([
+      {
+        ...alfa,
+        lastPriceCents: 10_200,
+        bidCents: 10_196,
+        askCents: 10_200,
+        volume: 40,
+        notionalCents: 406_000n,
+      },
+      ...rest,
     ]);
     fixture.detectChanges();
 
@@ -115,17 +122,4 @@ class FakeWorker implements ProducerWorkerPort {
   public emit(event: ProducerEvent): void {
     this.onmessage?.({ data: event } as MessageEvent<ProducerEvent>);
   }
-}
-
-function trade(overrides: Partial<MarketUpdate>): MarketUpdate {
-  return {
-    instrument: 'ALFA',
-    priceCents: 10_000,
-    tradeQuantity: 1,
-    bidCents: 9_999,
-    askCents: 10_000,
-    bidQuantity: 1,
-    askQuantity: 1,
-    ...overrides,
-  };
 }
